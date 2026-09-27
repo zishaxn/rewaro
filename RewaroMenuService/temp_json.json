@@ -1,0 +1,29 @@
+{
+  "currentStreak": 0,  
+  "longestStreak": 1,
+  "totalPrayed": 10,
+  "prayerStats": {
+    "fajr_prayed": 1,
+    "fajr_missed": 2,
+    "fajr_qaza": 0,
+    "dhuhr_prayed": 2,
+    "dhuhr_missed": 1,
+    "dhuhr_qaza": 0,
+    "asr_prayed": 1,
+    "asr_missed": 2,
+    "asr_qaza": 0,
+    "maghrib_prayed": 3,
+    "maghrib_missed": 0,
+    "maghrib_qaza": 0,
+    "isha_prayed": 3,
+    "isha_missed": 0,
+    "isha_qaza": 0,
+    "total_ideal": 35,
+    "total_recorded": 15,
+    "total_unrecorded": 20,
+    "total_prayed": 10,
+    "total_missed": 5,
+    "total_qaza": 0
+  },
+  "groupBy": "day"
+}

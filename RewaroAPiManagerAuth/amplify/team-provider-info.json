@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-rewaroapimanagerauth-dev-0aeea-authRole",
+      "UnauthRoleArn": "arn:aws:iam::730335176275:role/amplify-rewaroapimanagerauth-dev-0aeea-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::730335176275:role/amplify-rewaroapimanagerauth-dev-0aeea-authRole",
+      "Region": "ap-south-1",
+      "DeploymentBucketName": "amplify-rewaroapimanagerauth-dev-0aeea-deployment",
+      "UnauthRoleName": "amplify-rewaroapimanagerauth-dev-0aeea-unauthRole",
+      "StackName": "amplify-rewaroapimanagerauth-dev-0aeea",
+      "StackId": "arn:aws:cloudformation:ap-south-1:730335176275:stack/amplify-rewaroapimanagerauth-dev-0aeea/2e344ef0-144e-11f0-8f8c-0aeaa74be6b5",
+      "AmplifyAppId": "d1ymq3sw39zr9"
+    },
+    "categories": {
+      "auth": {
+        "rewaroapimanagerauth": {}
+      }
+    }
+  }
+}

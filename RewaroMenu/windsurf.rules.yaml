@@ -1,0 +1,73 @@
+# windsurf.rules.yaml
+# This file defines the codebase structure and conventions for Windsurf code generation.
+
+# Directory structure
+structure:
+  - app.py
+  - requirements.txt
+  - README.md
+  - .gitignore
+  - build/
+  - configs/
+  - deploy/
+  - routes/
+
+# General rules
+rules:
+  - All source code should be placed in subdirectories, not at the root except for entry points and config files.
+  - Place all business logic and endpoints under the 'routes/' directory.
+  - Place deployment scripts under 'deploy/'.
+  - Place configuration files under 'configs/'.
+  - Place build artifacts under 'build/'.
+  - The root directory should only contain entry points (like app.py), config files, and documentation.
+  - Use .gitignore to exclude files/folders that should not be version controlled.
+  # Database usage rules
+  - Use SQLAlchemy ORM for defining models and most business logic.
+  - Use SQLAlchemy sessions and context managers for ORM-based DB access.
+  - For direct/raw SQL, use psycopg2 with context managers and RealDictCursor.
+  - Database credentials and connection info must be loaded from environment variables.
+  - Prefer ORM for CRUD and relationships, use raw SQL only for special cases (e.g., authentication queries).
+
+# Import conventions
+imports:
+  - pattern: "from routes.common"
+    description: |
+      All shared code (db, models, utils) must be imported using absolute imports from 'routes.common'.
+  - pattern: "from sqlalchemy"
+    description: |
+      Use SQLAlchemy for ORM and DB interactions.
+
+# Python module conventions
+python:
+  package_init:
+    - routes/__init__.py
+    - routes/common/__init__.py
+  handler_exports:
+    # List all handler functions that should be exported from __init__.py
+    # Use a pattern: <resource>Handler (e.g., userHandler, orderHandler)
+    - <resource>Handler
+
+# Lambda/Serverless conventions
+lambda:
+  entry_point: app.py
+  handler_pattern: '*Handler'
+  requirements_file: requirements.txt
+
+# README and documentation
+readme:
+  must_describe:
+    - Directory structure
+    - Lambda/serverless usage
+    - How to add new routes
+    - Import conventions
+
+# General rules
+rules:
+  - All shared logic must be in routes/common/.
+  - Each route file must have a single exported handler function named <route>Handler.
+  - Only absolute imports from routes.common are allowed for shared code.
+  - No relative imports outside the module.
+  - All directories must have __init__.py if they contain Python modules.
+  - Use SQLAlchemy for DB access.
+  - Config files go in configs/.
+  - Deployment scripts go in deploy/.

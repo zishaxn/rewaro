@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-rewarocustomerauthpr-dev-3f12e-authRole",
+      "UnauthRoleArn": "arn:aws:iam::339712760609:role/amplify-rewarocustomerauthpr-dev-3f12e-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::339712760609:role/amplify-rewarocustomerauthpr-dev-3f12e-authRole",
+      "Region": "ap-south-1",
+      "DeploymentBucketName": "amplify-rewarocustomerauthpr-dev-3f12e-deployment",
+      "UnauthRoleName": "amplify-rewarocustomerauthpr-dev-3f12e-unauthRole",
+      "StackName": "amplify-rewarocustomerauthpr-dev-3f12e",
+      "StackId": "arn:aws:cloudformation:ap-south-1:339712760609:stack/amplify-rewarocustomerauthpr-dev-3f12e/a3936f90-96aa-11ef-96ae-024a3e33ea71",
+      "AmplifyAppId": "d3udoeer7jx2j1"
+    },
+    "categories": {
+      "auth": {
+        "rewarocustomerauthprod": {}
+      }
+    }
+  }
+}

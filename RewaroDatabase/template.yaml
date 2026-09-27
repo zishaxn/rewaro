@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AWS CloudFormation Template for RDS Services (no Secrets Manager).  -- Deletes everything on stack deletion
+
+Parameters:
+  PostgreDBName:
+    Type: String
+    Default: nabiapp
+    Description: Enter the name for the initial database
+  PostgreInstanceType:
+    Type: String
+    Default: db.t3.micro
+    Description: Enter PostgreSQL Instance Type
+  PostgreInstanceIdentifierRDS:
+    Type: String
+    Default: common-postgres
+    Description: Enter PostgreSQL Instance Identifier
+  PostgreEngineVersion13:
+    Type: String
+    Default: "13.20"
+    Description: Enter PostgreSQL Engine Version
+  RDSSecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Enter PostgreSQL Security Group Id(s)
+  Subnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: The ID of the first subnet for the DB Subnet Group
+  Subnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: The ID of the second subnet for the DB Subnet Group
+  PreferredMaintenanceWindow:
+    Type: String
+    Default: Sun:05:00-Sun:07:00
+    Description: Enter PostgreSQL Preferred Maintenance Window
+  DBMasterUsername:
+    Type: String
+    Default: mydbadmin
+    Description: Master DB username
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9_]*"
+    ConstraintDescription: must be alphanumeric and start with a letter.
+  DBMasterUserPassword:
+    Type: String
+    NoEcho: true
+    Description: The master user password for the DB instance (hidden)
+
+Resources:
+  # RDS Instance for PostgreSQL Database
+  PostgresDB:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete                # ← ensure DB is deleted when stack is deleted
+    Properties:
+      AllocatedStorage: 20
+      StorageType: gp2
+      BackupRetentionPeriod: 1
+      CACertificateIdentifier: rds-ca-rsa2048-g1
+      CopyTagsToSnapshot: true
+      EnableCloudwatchLogsExports:
+        - postgresql
+      DBInstanceClass: !Ref PostgreInstanceType
+      DBInstanceIdentifier: !Ref PostgreInstanceIdentifierRDS
+      DBName: !Ref PostgreDBName
+      DBParameterGroupName: !Ref PostgreParameterGroup13
+      VPCSecurityGroups: !Ref RDSSecurityGroups
+      DBSubnetGroupName: !Ref RDSSubnetPvtGroup
+      Engine: postgres
+      EngineVersion: !Ref PostgreEngineVersion13
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterUserPassword
+      MultiAZ: false
+      Port: 5432
+      PubliclyAccessible: false
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      DeletionProtection: false             # ← allow CFN to delete the DB instance
+
+  # Parameter Group for PostgreSQL 13
+  PostgreParameterGroup13:
+    Type: AWS::RDS::DBParameterGroup
+    DeletionPolicy: Delete                  # ← delete parameter group on stack deletion
+    Properties:
+      Description: Postgres Parameter Group
+      Family: postgres13
+      Parameters:
+        shared_preload_libraries: pg_stat_statements
+        track_activity_query_size: 2048
+
+  # Create Subnet Group for RDS
+  RDSSubnetPvtGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DeletionPolicy: Delete                  # ← delete subnet group on stack deletion
+    Properties:
+      DBSubnetGroupDescription: "RDS Subnet group for database"
+      SubnetIds:
+        - !Ref Subnet1Id
+        - !Ref Subnet2Id
+
+Outputs:
+  DBInstanceEndpoint:
+    Description: Connection endpoint for the database
+    Value: !GetAtt PostgresDB.Endpoint.Address
+  DBInstancePort:
+    Description: The port number on which the database accepts connections
+    Value: !GetAtt PostgresDB.Endpoint.Port
+  DBInstanceIdentifier:
+    Description: The instance identifier of the RDS instance
+    Value: !Ref PostgresDB
+  DBParameterGroup:
+    Description: The name of the RDS Parameter Group
+    Value: !Ref PostgreParameterGroup13
+  SubnetGroupName:
+    Description: The name of the RDS Subnet Group
+    Value: !Ref RDSSubnetPvtGroup

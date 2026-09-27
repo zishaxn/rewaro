@@ -1,0 +1,51 @@
+[
+    {
+      "ParameterKey": "SubnetIds",
+      "ParameterValue": "subnet-0123456789abcdef0,subnet-0fedcba9876543210"
+    },
+    {
+      "ParameterKey": "SecurityGroupIds",
+      "ParameterValue": "sg-0123abcd4567efgh8"
+    },
+    {
+      "ParameterKey": "RegionEnv",
+      "ParameterValue": "us-west-2"
+    },
+    {
+      "ParameterKey": "BusinessUserPool",
+      "ParameterValue": "arn:aws:cognito-idp:us-west-2:123456789012:userpool/us-west-2_dummyPoolId"
+    },
+    {
+      "ParameterKey": "DomainName",
+      "ParameterValue": "dummy-api.example.com"
+    },
+    {
+      "ParameterKey": "DbHost",
+      "ParameterValue": "dummy-db.example.com"
+    },
+    {
+      "ParameterKey": "DbPort",
+      "ParameterValue": "5432"
+    },
+    {
+      "ParameterKey": "DbUser",
+      "ParameterValue": "dummyuser"
+    },
+    {
+      "ParameterKey": "DbPassword",
+      "ParameterValue": "dummypassword123!"
+    },
+    {
+      "ParameterKey": "RewaroMenuDbName",
+      "ParameterValue": "dummy_menu"
+    },
+    {
+      "ParameterKey": "LambdaPackagesBucket",
+      "ParameterValue": "dummy-lambda-packages"
+    },
+    {
+      "ParameterKey": "Psycopg2Layer",
+      "ParameterValue": "arn:aws:lambda:us-west-2:123456789012:layer:dummy-postgres-layer:1"
+    }
+  ]
+  

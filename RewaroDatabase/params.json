@@ -1,0 +1,43 @@
+[
+    {
+      "ParameterKey": "PostgreDBName",
+      "ParameterValue": "nabiapp"
+    },
+    {
+      "ParameterKey": "PostgreInstanceType",
+      "ParameterValue": "db.t3.micro"
+    },
+    {
+      "ParameterKey": "PostgreInstanceIdentifierRDS",
+      "ParameterValue": "common-postgres"
+    },
+    {
+      "ParameterKey": "PostgreEngineVersion13",
+      "ParameterValue": "13.20"
+    },
+    {
+      "ParameterKey": "RDSSecurityGroups",
+      "ParameterValue": "sg-051805f07f4189e49"
+    },
+    {
+      "ParameterKey": "Subnet1Id",
+      "ParameterValue": "subnet-0cbced9579139153c"
+    },
+    {
+      "ParameterKey": "Subnet2Id",
+      "ParameterValue": "subnet-02ad1ed23b94384fc"
+    },
+    {
+      "ParameterKey": "PreferredMaintenanceWindow",
+      "ParameterValue": "Sun:05:00-Sun:07:00"
+    },
+    {
+      "ParameterKey": "DBMasterUsername",
+      "ParameterValue": "mydbadmin"
+    },
+    {
+      "ParameterKey": "DBMasterUserPassword",
+      "ParameterValue": "cloudberrysolutionskurla"
+    }
+  ]
+  

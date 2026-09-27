@@ -1,0 +1,46 @@
+[
+  {
+    "ParameterKey": "SubnetIds",
+    "ParameterValue": "subnet-0cb4f58bc92d44bf9subnet-0cf1c27a129b6452b"
+  },
+  {
+    "ParameterKey": "SecurityGroupIds",
+    "ParameterValue": "\"sg-0dae6fe00aa9d66cb\""
+  },
+  {
+    "ParameterKey": "RegionEnv",
+    "ParameterValue": "ap-south-1"
+  },
+  {
+    "ParameterKey": "BusinessUserPool",
+    "ParameterValue": "arn:aws:cognito-idp:ap-south-1:730335176275:userpool/ap-south-1_apP17JcPx"
+  },
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": "services-api-np.rewaro.in"
+  },
+  {
+    "ParameterKey": "DbHost",
+    "ParameterValue": "rewaro-postgres.c7ou6kcgc5sq.ap-south-1.rds.amazonaws.com"
+  },
+  {
+    "ParameterKey": "DbPort",
+    "ParameterValue": "5432"
+  },
+  {
+    "ParameterKey": "DbUser",
+    "ParameterValue": "mydbadmin"
+  },
+  {
+    "ParameterKey": "DbPassword",
+    "ParameterValue": "\"p()'(wb[pTmS40~Y\""
+  },
+  {
+    "ParameterKey": "LambdaPackagesBucket",
+    "ParameterValue": "cf-templates-stqt06pfotfu-ap-south-1"
+  },
+  {
+    "ParameterKey": "Psycopg2Layer",
+    "ParameterValue": "arn:aws:lambda:ap-south-1:339712760609:layer:postgres:1"
+  }
+]

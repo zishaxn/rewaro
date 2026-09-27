@@ -1,0 +1,582 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Menu Management Microservice - Allows merchants to create, update, and manage their menus'
+
+Parameters:
+  Environment:
+    Description: Environment (dev, test, prod)
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two subnets in your selected VPC
+  SecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Select one or more security groups in the selected VPC
+  RegionEnv:
+    Description: Stack Region
+    Type: String
+    Default: ap-south-1
+  DomainName:
+    Type: String
+    Description: The existing custom domain name for API Gateway
+    Default: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  DbHost:
+    Type: String
+    Description: The database host name
+  DbUser:
+    Type: String
+    Description: The database master username
+  DbPort:
+    Type: Number
+    Default: 5432
+    Description: The port of the database
+  DbPassword:
+    Type: String
+    NoEcho: true # This hides the password when viewed in the console
+    Description: The database master password
+  BusinessUserPool:
+    Description: Cognito UserPool Name
+    Type: String
+    Default: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  RewaroMenuDbName:
+    Type: String
+    Description: The name of the menu database
+    
+  LambdaPackagesBucket:
+    Type: String
+    Description: S3 Bucket for Lambda Packages
+    Default: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  Psycopg2Layer:
+    Type: String
+    Description: Lambda Layer for Psycopg2
+    Default: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+Conditions:
+  IsDev: !Equals [!Ref Environment, 'dev']
+  IsTest: !Equals [!Ref Environment, 'test']
+  IsProd: !Equals [!Ref Environment, 'prod']
+
+Resources:
+
+
+# /////////// TODO   // make it regional
+  # API Gateway
+  MenuAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub menu-service-${Environment}
+      Description: API for menu management service
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # API Gateway Stage
+  MenuAPIStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref MenuAPIDeployment
+      RestApiId: !Ref MenuAPI
+      StageName: !Ref Environment
+
+  # API Gateway Deployment
+  MenuAPIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      # Categories endpoints
+      - CategoriesMethod
+      - CategoryMethod
+      # Items endpoints
+      - ItemsMethod
+      - ItemMethod
+      # Item Relationships endpoints
+      - ItemVariationsMethod
+      - ItemVariationMethod
+      - ItemAddonsMethod
+      - ItemAddonMethod
+      # Variations endpoints
+      - VariationsMethod
+      - VariationMethod
+      # Addons endpoints
+      - AddonsMethod
+      - AddonMethod
+      # Menu endpoint
+      - MenuMethod
+      # Outlets endpoints
+      - OutletsMethod
+      - OutletMethod
+      - OutletMenuMethod
+    Properties:
+      RestApiId: !Ref MenuAPI
+
+  # Base Path Mapping for Custom Domain
+  MenuAPIBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    DependsOn:
+      - MenuAPIStage
+    Properties:
+      BasePath: menu-service
+      DomainName: !Ref DomainName
+      RestApiId: !Ref MenuAPI
+      Stage: !Ref Environment
+
+  # Lambda Functions
+  MenuLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub menu-service-${Environment}
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      Role: !GetAtt MenuServiceLambdaExecutionRole.Arn
+      VpcConfig:
+        SecurityGroupIds: !Ref SecurityGroupIds
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          DB_HOST: !Ref DbHost
+          DB_PORT: !Ref DbPort
+          DB_NAME: !Ref RewaroMenuDbName
+          DB_USERNAME: !Ref DbUser
+          DB_PASSWORD: !Ref DbPassword
+          ENVIRONMENT: !Ref Environment
+          REGION: !Ref RegionEnv
+      Layers:
+        - !Ref Psycopg2Layer
+      Code:
+        S3Bucket: !Ref LambdaPackagesBucket
+        S3Key: !Sub menu-service-${Environment}.zip
+
+
+#/////////////// TODO // need more permissions and remove rds policy
+  # Lambda Execution Role
+  MenuServiceLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: menu-service-lambda-execution-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DashboardGetReviewsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: LambdaAccessResources
+                Effect: Allow
+                Action:
+                  - dynamodb:*
+                  - cloudwatch:*
+                  - s3:*
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:ListUsers
+                Resource: "*"
+              - Sid: S3Access
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:HeadObject
+                Resource: "*"
+
+        - PolicyName: APIGatewayFullAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: VisualEditor0
+                Effect: Allow
+                Action: apigateway:*
+                Resource: "*"
+        - PolicyName: InvokePermissionAPIGateway
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+        - PolicyName: VPCAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
+                Resource: "*"
+
+
+  # Add Cognito Authorizer
+  CognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: CognitoUserPoolAuthorizer
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref MenuAPI
+      ProviderARNs:
+        - !Ref BusinessUserPool
+
+  # API Gateway Resource and Method for Categories
+  CategoriesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !GetAtt MenuAPI.RootResourceId
+      PathPart: 'categories'
+
+  CategoriesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref CategoriesResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  CategoryResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref CategoriesResource
+      PathPart: '{id}'
+
+  CategoryMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref CategoryResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  # API Gateway Resource and Method for Items
+  ItemsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !GetAtt MenuAPI.RootResourceId
+      PathPart: 'items'
+
+  ItemsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref ItemsResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  ItemResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref ItemsResource
+      PathPart: '{id}'
+
+  ItemMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref ItemResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  # API Gateway Resources and Methods for Item Relationships
+  ItemVariationsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref ItemResource
+      PathPart: 'variations'
+
+  ItemVariationsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref ItemVariationsResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  ItemVariationResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref ItemVariationsResource
+      PathPart: '{variation_id}'
+
+  ItemVariationMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref ItemVariationResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  ItemAddonsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref ItemResource
+      PathPart: 'addons'
+
+  ItemAddonsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref ItemAddonsResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  ItemAddonResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref ItemAddonsResource
+      PathPart: '{addon_id}'
+
+  ItemAddonMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref ItemAddonResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  # API Gateway Resource and Method for Variations
+  VariationsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !GetAtt MenuAPI.RootResourceId
+      PathPart: 'variations'
+
+  VariationsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref VariationsResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  VariationResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref VariationsResource
+      PathPart: '{id}'
+
+  VariationMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref VariationResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  # API Gateway Resource and Method for Addons
+  AddonsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !GetAtt MenuAPI.RootResourceId
+      PathPart: 'addons'
+
+  AddonsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref AddonsResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  AddonResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref AddonsResource
+      PathPart: '{id}'
+
+  AddonMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref AddonResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  # API Gateway Resource and Method for Menu
+  MenuResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !GetAtt MenuAPI.RootResourceId
+      PathPart: 'menu'
+
+  MenuMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref MenuResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  OutletsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !GetAtt MenuAPI.RootResourceId
+      PathPart: 'outlets'
+
+  OutletsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref OutletsResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  OutletResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref OutletsResource
+      PathPart: '{outlet_id}'
+
+  OutletMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref OutletResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  OutletMenuResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ParentId: !Ref OutletResource
+      PathPart: 'menu'
+
+  OutletMenuMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref MenuAPI
+      ResourceId: !Ref OutletMenuResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MenuLambdaFunction.Arn}/invocations
+
+  # Lambda Permission for API Gateway
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref MenuLambdaFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MenuAPI}/*/*/*
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${DomainName}/menu-service-${Environment}
+    Export:
+      Name: !Sub menu-service-${Environment}-api-endpoint
+
+  LambdaFunction:
+    Description: Lambda function ARN
+    Value: !GetAtt MenuLambdaFunction.Arn
+    Export:
+      Name: !Sub menu-service-${Environment}-lambda-arn
